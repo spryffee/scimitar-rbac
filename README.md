@@ -1,2 +1,3 @@
 # scimitar-rbac
-TBD
+
+RBAC profile for SCIM
