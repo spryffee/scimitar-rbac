@@ -1,0 +1,105 @@
+# frozen_string_literal: true
+
+class RbacRole < ApplicationRecord
+  self.table_name = "rbac_roles"
+
+  # Entitlement assignments (PA ⊆ P × R)
+  has_many :role_entitlements,
+           class_name:  "RbacRoleEntitlement",
+           foreign_key: :role_id,
+           dependent:   :destroy,
+           inverse_of:  :role
+
+  has_many :entitlements,
+           through:    :role_entitlements,
+           class_name: "RbacEntitlement"
+
+  # Role hierarchy — parent relationships
+  has_many :parent_links,
+           class_name:  "RbacRoleHierarchy",
+           foreign_key: :child_role_id,
+           dependent:   :destroy,
+           inverse_of:  :child_role
+
+  has_many :parent_roles,
+           through:     :parent_links,
+           source:      :parent_role,
+           class_name:  "RbacRole"
+
+  # Role hierarchy — child relationships
+  has_many :child_links,
+           class_name:  "RbacRoleHierarchy",
+           foreign_key: :parent_role_id,
+           dependent:   :destroy,
+           inverse_of:  :parent_role
+
+  has_many :child_roles,
+           through:     :child_links,
+           source:      :child_role,
+           class_name:  "RbacRole"
+
+  validates :display_name, presence: true
+
+  # --- SCIM Configuration ---
+
+  def self.scim_resource_type
+    Scimitar::Resources::Rbac::Role
+  end
+
+  def self.scim_attributes_map
+    {
+      id:          :id,
+      externalId:  :external_id,
+      displayName: :display_name,
+      type:        :role_type,
+      description: :description,
+      limitedAssignmentsPermitted: :limited_assignments_permitted,
+      totalAssignmentsPermitted:   :total_assignments_permitted,
+      entitlements: [
+        {
+          list:  :entitlements,
+          using: { value: :id, display: :display_name }
+        }
+      ],
+      parentRoles: [
+        {
+          list:  :parent_roles,
+          using: { value: :id, display: :display_name }
+        }
+      ],
+      childRoles: [
+        {
+          list:  :child_roles,
+          using: { value: :id, display: :display_name }
+        }
+      ]
+    }
+  end
+
+  def self.scim_mutable_attributes
+    nil
+  end
+
+  def self.scim_queryable_attributes
+    {
+      "displayName" => { column: :display_name },
+      "type"        => { column: :role_type },
+      "externalId"  => { column: :external_id }
+    }
+  end
+
+  def self.scim_timestamps_map
+    {
+      created:      :created_at,
+      lastModified: :updated_at
+    }
+  end
+
+  include Scimitar::Resources::Mixin
+
+  # Computed attribute
+  def total_assignments_used
+    # Override this with actual count logic in your application
+    0
+  end
+end

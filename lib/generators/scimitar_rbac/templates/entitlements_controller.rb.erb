@@ -1,0 +1,15 @@
+# frozen_string_literal: true
+
+module ScimV2
+  class EntitlementsController < Scimitar::ActiveRecordBackedResourcesController
+    protected
+
+    def storage_class
+      RbacEntitlement
+    end
+
+    def storage_scope
+      RbacEntitlement.all
+    end
+  end
+end

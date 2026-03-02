@@ -1,0 +1,91 @@
+# frozen_string_literal: true
+
+class CreateScimitarRbacTables < ActiveRecord::Migration<%= migration_version %>
+  def change
+    # Enable UUID support if using PostgreSQL
+    enable_extension "pgcrypto" unless extension_enabled?("pgcrypto")
+
+    create_table :rbac_applications, id: :uuid do |t|
+      t.string  :external_id
+      t.string  :display_name, null: false
+      t.text    :description
+      t.boolean :active, default: true, null: false
+
+      t.timestamps
+    end
+
+    create_table :rbac_roles, id: :uuid do |t|
+      t.string  :external_id
+      t.string  :display_name,  null: false
+      t.string  :role_type
+      t.text    :description
+      t.integer :limited_assignments_permitted
+      t.integer :total_assignments_permitted
+
+      t.timestamps
+    end
+
+    create_table :rbac_entitlements, id: :uuid do |t|
+      t.string  :external_id
+      t.string  :display_name, null: false
+      t.string  :entitlement_type
+      t.text    :description
+      t.uuid    :application_id
+      t.integer :limited_assignments_permitted
+      t.integer :total_assignments_permitted
+
+      t.timestamps
+    end
+
+    # Role ↔ Entitlement assignments (PA ⊆ P × R)
+    create_table :rbac_role_entitlements, id: :uuid do |t|
+      t.uuid :role_id, null: false
+      t.uuid :entitlement_id, null: false
+
+      t.timestamps
+    end
+
+    # Role hierarchy (RH ⊆ R × R)
+    create_table :rbac_role_hierarchies, id: :uuid do |t|
+      t.uuid :parent_role_id, null: false
+      t.uuid :child_role_id,  null: false
+
+      t.timestamps
+    end
+
+    # Entitlement hierarchy
+    create_table :rbac_entitlement_hierarchies, id: :uuid do |t|
+      t.uuid :parent_entitlement_id, null: false
+      t.uuid :child_entitlement_id,  null: false
+
+      t.timestamps
+    end
+
+    add_index :rbac_applications,    :display_name
+    add_index :rbac_roles,           :display_name
+    add_index :rbac_entitlements,    :display_name
+    add_index :rbac_entitlements,    :application_id
+
+    add_index :rbac_role_entitlements, [:role_id, :entitlement_id], unique: true
+    add_index :rbac_role_entitlements, :entitlement_id
+
+    add_index :rbac_role_hierarchies, [:parent_role_id, :child_role_id], unique: true
+    add_index :rbac_role_hierarchies, :child_role_id
+
+    add_index :rbac_entitlement_hierarchies, [:parent_entitlement_id, :child_entitlement_id],
+              unique: true, name: "idx_rbac_ent_hier_parent_child"
+    add_index :rbac_entitlement_hierarchies, :child_entitlement_id,
+              name: "idx_rbac_ent_hier_child"
+
+    add_foreign_key :rbac_entitlements, :rbac_applications, column: :application_id
+
+    add_foreign_key :rbac_role_entitlements, :rbac_roles,        column: :role_id
+    add_foreign_key :rbac_role_entitlements, :rbac_entitlements, column: :entitlement_id
+
+    add_foreign_key :rbac_role_hierarchies, :rbac_roles, column: :parent_role_id
+    add_foreign_key :rbac_role_hierarchies, :rbac_roles, column: :child_role_id
+
+    add_foreign_key :rbac_entitlement_hierarchies, :rbac_entitlements, column: :parent_entitlement_id
+    add_foreign_key :rbac_entitlement_hierarchies, :rbac_entitlements, column: :child_entitlement_id
+  end
+end

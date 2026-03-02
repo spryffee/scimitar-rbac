@@ -1,0 +1,55 @@
+# frozen_string_literal: true
+
+class RbacApplication < ApplicationRecord
+  self.table_name = "rbac_applications"
+
+  has_many :entitlements,
+           class_name:  "RbacEntitlement",
+           foreign_key: :application_id,
+           dependent:   :restrict_with_error
+
+  validates :display_name, presence: true
+
+  # --- SCIM Configuration ---
+
+  def self.scim_resource_type
+    Scimitar::Resources::Rbac::Application
+  end
+
+  def self.scim_attributes_map
+    {
+      id:          :id,
+      externalId:  :external_id,
+      displayName: :display_name,
+      description: :description,
+      active:      :active,
+      entitlements: [
+        {
+          list:  :entitlements,
+          using: { value: :id, display: :display_name }
+        }
+      ]
+    }
+  end
+
+  def self.scim_mutable_attributes
+    nil
+  end
+
+  def self.scim_queryable_attributes
+    {
+      "displayName" => { column: :display_name },
+      "active"      => { column: :active },
+      "externalId"  => { column: :external_id }
+    }
+  end
+
+  def self.scim_timestamps_map
+    {
+      created:      :created_at,
+      lastModified: :updated_at
+    }
+  end
+
+  include Scimitar::Resources::Mixin
+end

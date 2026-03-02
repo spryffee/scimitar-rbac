@@ -1,0 +1,114 @@
+# frozen_string_literal: true
+
+class RbacEntitlement < ApplicationRecord
+  self.table_name = "rbac_entitlements"
+
+  # Application reference
+  belongs_to :application,
+             class_name:  "RbacApplication",
+             foreign_key: :application_id,
+             optional:    true
+
+  # Role assignments (PA ⊆ P × R, viewed from the entitlement side)
+  has_many :role_entitlements,
+           class_name:  "RbacRoleEntitlement",
+           foreign_key: :entitlement_id,
+           dependent:   :destroy,
+           inverse_of:  :entitlement
+
+  has_many :roles,
+           through:    :role_entitlements,
+           class_name: "RbacRole"
+
+  # Entitlement hierarchy — parent relationships
+  has_many :parent_links,
+           class_name:  "RbacEntitlementHierarchy",
+           foreign_key: :child_entitlement_id,
+           dependent:   :destroy,
+           inverse_of:  :child_entitlement
+
+  has_many :parent_entitlements,
+           through:     :parent_links,
+           source:      :parent_entitlement,
+           class_name:  "RbacEntitlement"
+
+  # Entitlement hierarchy — child relationships
+  has_many :child_links,
+           class_name:  "RbacEntitlementHierarchy",
+           foreign_key: :parent_entitlement_id,
+           dependent:   :destroy,
+           inverse_of:  :parent_entitlement
+
+  has_many :child_entitlements,
+           through:     :child_links,
+           source:      :child_entitlement,
+           class_name:  "RbacEntitlement"
+
+  validates :display_name, presence: true
+
+  # --- SCIM Configuration ---
+
+  def self.scim_resource_type
+    Scimitar::Resources::Rbac::Entitlement
+  end
+
+  def self.scim_attributes_map
+    {
+      id:          :id,
+      externalId:  :external_id,
+      displayName: :display_name,
+      type:        :entitlement_type,
+      description: :description,
+      limitedAssignmentsPermitted: :limited_assignments_permitted,
+      totalAssignmentsPermitted:   :total_assignments_permitted,
+      application: {
+        value:   :application_id,
+        display: :application_name
+      },
+      roles: [
+        {
+          list:  :roles,
+          using: { value: :id, display: :display_name }
+        }
+      ],
+      parentEntitlements: [
+        {
+          list:  :parent_entitlements,
+          using: { value: :id, display: :display_name }
+        }
+      ],
+      childEntitlements: [
+        {
+          list:  :child_entitlements,
+          using: { value: :id, display: :display_name }
+        }
+      ]
+    }
+  end
+
+  def self.scim_mutable_attributes
+    nil
+  end
+
+  def self.scim_queryable_attributes
+    {
+      "displayName" => { column: :display_name },
+      "type"        => { column: :entitlement_type },
+      "externalId"  => { column: :external_id }
+    }
+  end
+
+  def self.scim_timestamps_map
+    {
+      created:      :created_at,
+      lastModified: :updated_at
+    }
+  end
+
+  include Scimitar::Resources::Mixin
+
+  # Helper for SCIM attribute mapping
+  def application_name
+    application&.display_name
+  end
+end

@@ -1,0 +1,15 @@
+# frozen_string_literal: true
+
+module ScimV2
+  class ApplicationsController < Scimitar::ActiveRecordBackedResourcesController
+    protected
+
+    def storage_class
+      RbacApplication
+    end
+
+    def storage_scope
+      RbacApplication.all
+    end
+  end
+end
