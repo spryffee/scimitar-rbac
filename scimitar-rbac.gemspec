@@ -33,5 +33,5 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
 
   spec.add_dependency "scimitar", "~> 2.0"
-  spec.add_dependency "rails", ">= 7.0"
+  spec.add_dependency "rails", ">= 7.0", "< 9.0"
 end
