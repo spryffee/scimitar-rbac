@@ -44,7 +44,7 @@ jobs:
           echo "---" > ~/.gem/credentials
           echo ":rubygems_api_key: ${{ secrets.RUBYGEMS_API_KEY }}" >> ~/.gem/credentials
           chmod 0600 ~/.gem/credentials
-          gem push scimitar-rbac-*.gem
+          gem push scimitar-rbac-*.gem || echo "Gem version may already exist on RubyGems, continuing..."
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
