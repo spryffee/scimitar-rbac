@@ -2,10 +2,17 @@
 
 class CreateScimitarRbacTables < ActiveRecord::Migration<%= migration_version %>
   def change
-    # Enable UUID support if using PostgreSQL
-    enable_extension "pgcrypto" unless extension_enabled?("pgcrypto")
+    postgres = connection.adapter_name.downcase.include?("postgres")
 
-    create_table :rbac_applications, id: :uuid do |t|
+    # On PostgreSQL, use native UUID columns (gen_random_uuid via pgcrypto).
+    # On other adapters (SQLite, MySQL), fall back to string columns holding
+    # UUID strings that the application is responsible for generating.
+    enable_extension "pgcrypto" if postgres && !extension_enabled?("pgcrypto")
+
+    id_type = postgres ? :uuid : :string
+    fk_type = id_type
+
+    create_table :rbac_applications, id: id_type do |t|
       t.string  :external_id
       t.string  :display_name, null: false
       t.text    :description
@@ -14,7 +21,7 @@ class CreateScimitarRbacTables < ActiveRecord::Migration<%= migration_version %>
       t.timestamps
     end
 
-    create_table :rbac_roles, id: :uuid do |t|
+    create_table :rbac_roles, id: id_type do |t|
       t.string  :external_id
       t.string  :display_name,  null: false
       t.string  :role_type
@@ -25,12 +32,12 @@ class CreateScimitarRbacTables < ActiveRecord::Migration<%= migration_version %>
       t.timestamps
     end
 
-    create_table :rbac_entitlements, id: :uuid do |t|
+    create_table :rbac_entitlements, id: id_type do |t|
       t.string  :external_id
       t.string  :display_name, null: false
       t.string  :entitlement_type
       t.text    :description
-      t.uuid    :application_id
+      t.column  :application_id, fk_type
       t.integer :limited_assignments_permitted
       t.integer :total_assignments_permitted
 
@@ -38,25 +45,25 @@ class CreateScimitarRbacTables < ActiveRecord::Migration<%= migration_version %>
     end
 
     # Role ↔ Entitlement assignments (PA ⊆ P × R)
-    create_table :rbac_role_entitlements, id: :uuid do |t|
-      t.uuid :role_id, null: false
-      t.uuid :entitlement_id, null: false
+    create_table :rbac_role_entitlements, id: id_type do |t|
+      t.column :role_id,        fk_type, null: false
+      t.column :entitlement_id, fk_type, null: false
 
       t.timestamps
     end
 
     # Role hierarchy (RH ⊆ R × R)
-    create_table :rbac_role_hierarchies, id: :uuid do |t|
-      t.uuid :parent_role_id, null: false
-      t.uuid :child_role_id,  null: false
+    create_table :rbac_role_hierarchies, id: id_type do |t|
+      t.column :parent_role_id, fk_type, null: false
+      t.column :child_role_id,  fk_type, null: false
 
       t.timestamps
     end
 
     # Entitlement hierarchy
-    create_table :rbac_entitlement_hierarchies, id: :uuid do |t|
-      t.uuid :parent_entitlement_id, null: false
-      t.uuid :child_entitlement_id,  null: false
+    create_table :rbac_entitlement_hierarchies, id: id_type do |t|
+      t.column :parent_entitlement_id, fk_type, null: false
+      t.column :child_entitlement_id,  fk_type, null: false
 
       t.timestamps
     end

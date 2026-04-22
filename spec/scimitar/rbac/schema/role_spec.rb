@@ -36,13 +36,6 @@ RSpec.describe Scimitar::Schema::Rbac::Role do
       expect(attr_names).to include("description")
     end
 
-    it "defines users as multi-valued read-only" do
-      users = attributes.find { |a| a.name == "users" }
-      expect(users).not_to be_nil
-      expect(users.multiValued).to be true
-      expect(users.mutability).to eq("readOnly")
-    end
-
     it "defines entitlements as multi-valued (the key RBAC link)" do
       entitlements = attributes.find { |a| a.name == "entitlements" }
       expect(entitlements).not_to be_nil

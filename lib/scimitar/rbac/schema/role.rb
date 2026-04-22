@@ -32,9 +32,6 @@ module Scimitar
             Scimitar::Schema::Attribute.new(name: "type",        type: "string"),
             Scimitar::Schema::Attribute.new(name: "description", type: "string"),
 
-            Scimitar::Schema::Attribute.new(name: "users",        multiValued: true,
-              complexType: Scimitar::ComplexTypes::ReferenceMember, mutability: "readOnly"),
-
             Scimitar::Schema::Attribute.new(name: "entitlements", multiValued: true,
               complexType: Scimitar::ComplexTypes::Rbac::EntitlementAssignment),
 
