@@ -1,9 +1,5 @@
 # scimitar-rbac — project instructions
 
-## Brain wiki
-This project is tracked in `~/brain/wiki/entities/scimitar-rbac.md`.
-Follow the coding-session update workflow in `~/brain/CLAUDE.md` automatically — update the entity page when bugs are fixed, features are added, or a new version is released. Do not wait to be asked.
-
 ## Stack
 Ruby gem · Rails engine · RSpec (dummy app in `spec/apps/dummy/`) · vendored bundle
 
