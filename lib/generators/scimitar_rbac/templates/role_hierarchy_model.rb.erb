@@ -1,0 +1,48 @@
+# frozen_string_literal: true
+
+class RbacRoleHierarchy < ApplicationRecord
+  self.table_name = "rbac_role_hierarchies"
+
+  belongs_to :parent_role, class_name: "RbacRole", foreign_key: :parent_role_id, inverse_of: :child_links
+  belongs_to :child_role,  class_name: "RbacRole", foreign_key: :child_role_id,  inverse_of: :parent_links
+
+  validates :parent_role_id, presence: true
+  validates :child_role_id,  presence: true
+  validates :child_role_id,  uniqueness: { scope: :parent_role_id }
+
+  validate :no_self_loop
+  validate :no_cycle
+
+  private
+
+  def no_self_loop
+    return if parent_role_id.blank? || child_role_id.blank?
+    errors.add(:child_role_id, "cannot be the same as the parent") if child_role_id == parent_role_id
+  end
+
+  # BFS from child_role_id going downward — if the proposed parent_role_id is
+  # reachable as a descendant, adding this edge would close a cycle.
+  def no_cycle
+    return if parent_role_id.blank? || child_role_id.blank?
+
+    visited = Set.new
+    queue   = [child_role_id]
+
+    until queue.empty?
+      current = queue.shift
+      next if visited.include?(current)
+      visited << current
+
+      candidates = self.class.where(parent_role_id: current)
+      candidates = candidates.where.not(id: id) if persisted?
+
+      candidates.pluck(:child_role_id).each do |desc|
+        if desc == parent_role_id
+          errors.add(:base, "would create a cycle in the role hierarchy")
+          return
+        end
+        queue << desc unless visited.include?(desc)
+      end
+    end
+  end
+end

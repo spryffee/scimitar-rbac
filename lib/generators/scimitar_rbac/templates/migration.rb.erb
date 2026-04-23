@@ -3,6 +3,7 @@
 class CreateScimitarRbacTables < ActiveRecord::Migration<%= migration_version %>
   def change
     postgres = connection.adapter_name.downcase.include?("postgres")
+    mysql    = connection.adapter_name.downcase.include?("mysql")
 
     # On PostgreSQL, use native UUID columns (gen_random_uuid via pgcrypto).
     # On other adapters (SQLite, MySQL), fall back to string columns holding
@@ -73,6 +74,19 @@ class CreateScimitarRbacTables < ActiveRecord::Migration<%= migration_version %>
     add_index :rbac_entitlements,    :display_name
     add_index :rbac_entitlements,    :application_id
 
+    # Partial unique indexes on external_id (NULL rows are excluded so multiple
+    # records may have no external_id without violating uniqueness).
+    # MySQL/MariaDB do not support partial/filtered indexes; use a plain index there.
+    if mysql
+      add_index :rbac_applications, :external_id, name: "idx_rbac_apps_ext_id"
+      add_index :rbac_roles,        :external_id, name: "idx_rbac_roles_ext_id"
+      add_index :rbac_entitlements, :external_id, name: "idx_rbac_ents_ext_id"
+    else
+      add_index :rbac_applications, :external_id, unique: true, where: "external_id IS NOT NULL", name: "idx_rbac_apps_ext_id"
+      add_index :rbac_roles,        :external_id, unique: true, where: "external_id IS NOT NULL", name: "idx_rbac_roles_ext_id"
+      add_index :rbac_entitlements, :external_id, unique: true, where: "external_id IS NOT NULL", name: "idx_rbac_ents_ext_id"
+    end
+
     add_index :rbac_role_entitlements, [:role_id, :entitlement_id], unique: true
     add_index :rbac_role_entitlements, :entitlement_id
 
@@ -94,5 +108,14 @@ class CreateScimitarRbacTables < ActiveRecord::Migration<%= migration_version %>
 
     add_foreign_key :rbac_entitlement_hierarchies, :rbac_entitlements, column: :parent_entitlement_id
     add_foreign_key :rbac_entitlement_hierarchies, :rbac_entitlements, column: :child_entitlement_id
+
+    # Prevent self-loops at the DB level (cycle detection is enforced in the
+    # model; this constraint stops the most common mistake at the lowest cost).
+    add_check_constraint :rbac_role_hierarchies,
+                         "parent_role_id <> child_role_id",
+                         name: "chk_rbac_role_hier_no_self"
+    add_check_constraint :rbac_entitlement_hierarchies,
+                         "parent_entitlement_id <> child_entitlement_id",
+                         name: "chk_rbac_ent_hier_no_self"
   end
 end

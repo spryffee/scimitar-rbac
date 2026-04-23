@@ -1,0 +1,48 @@
+# frozen_string_literal: true
+
+class RbacEntitlementHierarchy < ApplicationRecord
+  self.table_name = "rbac_entitlement_hierarchies"
+
+  belongs_to :parent_entitlement, class_name: "RbacEntitlement", foreign_key: :parent_entitlement_id, inverse_of: :child_links
+  belongs_to :child_entitlement,  class_name: "RbacEntitlement", foreign_key: :child_entitlement_id,  inverse_of: :parent_links
+
+  validates :parent_entitlement_id, presence: true
+  validates :child_entitlement_id,  presence: true
+  validates :child_entitlement_id,  uniqueness: { scope: :parent_entitlement_id }
+
+  validate :no_self_loop
+  validate :no_cycle
+
+  private
+
+  def no_self_loop
+    return if parent_entitlement_id.blank? || child_entitlement_id.blank?
+    errors.add(:child_entitlement_id, "cannot be the same as the parent") if child_entitlement_id == parent_entitlement_id
+  end
+
+  # BFS from child_entitlement_id going downward — if the proposed
+  # parent_entitlement_id is reachable as a descendant, this edge closes a cycle.
+  def no_cycle
+    return if parent_entitlement_id.blank? || child_entitlement_id.blank?
+
+    visited = Set.new
+    queue   = [child_entitlement_id]
+
+    until queue.empty?
+      current = queue.shift
+      next if visited.include?(current)
+      visited << current
+
+      candidates = self.class.where(parent_entitlement_id: current)
+      candidates = candidates.where.not(id: id) if persisted?
+
+      candidates.pluck(:child_entitlement_id).each do |desc|
+        if desc == parent_entitlement_id
+          errors.add(:base, "would create a cycle in the entitlement hierarchy")
+          return
+        end
+        queue << desc unless visited.include?(desc)
+      end
+    end
+  end
+end

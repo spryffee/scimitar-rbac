@@ -21,9 +21,11 @@ module ScimitarRbac
     end
 
     def create_model_files
-      template "role_model.rb.erb",        "app/models/rbac_role.rb"
-      template "entitlement_model.rb.erb", "app/models/rbac_entitlement.rb"
-      template "application_model.rb.erb", "app/models/rbac_application.rb"
+      template "role_model.rb.erb",                "app/models/rbac_role.rb"
+      template "entitlement_model.rb.erb",         "app/models/rbac_entitlement.rb"
+      template "application_model.rb.erb",         "app/models/rbac_application.rb"
+      template "role_hierarchy_model.rb.erb",      "app/models/rbac_role_hierarchy.rb"
+      template "entitlement_hierarchy_model.rb.erb", "app/models/rbac_entitlement_hierarchy.rb"
     end
 
     def create_controller_files

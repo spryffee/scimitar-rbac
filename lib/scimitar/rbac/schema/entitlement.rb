@@ -8,7 +8,7 @@ module Scimitar
       # to one Application. The Role<->Entitlement relationship is the key
       # missing link in standard SCIM that this profile addresses.
       class Entitlement < Scimitar::Schema::Base
-        def initialize(options = {})
+        def initialize
           super(
             name:            "Entitlement",
             id:              self.class.id,
@@ -28,7 +28,7 @@ module Scimitar
             Scimitar::Schema::Attribute.new(name: "description", type: "string"),
 
             Scimitar::Schema::Attribute.new(name: "application",
-              complexType: Scimitar::ComplexTypes::Rbac::ApplicationReference),
+              complexType: Scimitar::ComplexTypes::Rbac::ApplicationReference, mutability: "readWrite"),
 
             Scimitar::Schema::Attribute.new(name: "roles", multiValued: true,
               complexType: Scimitar::ComplexTypes::Rbac::RoleAssignment, mutability: "readOnly"),

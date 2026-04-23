@@ -7,8 +7,6 @@ require_relative "rbac/route_helper"
 
 module Scimitar
   module Rbac
-    class Error < StandardError; end
-
     # URN prefix for RBAC extension schemas
     URN_PREFIX = "urn:ietf:params:scim:schemas:extension:rbac:2.0"
 
@@ -17,8 +15,9 @@ module Scimitar
     def self.load!
       return if @loaded
 
-      # Complex type schemas (must be loaded before the complex types
-      # that reference them and before resource schemas that use them)
+      # Complex-type schema classes must be loaded before the complex-type
+      # classes that reference them (via set_schema), which in turn must be
+      # loaded before the resource schema classes that embed them as attributes.
       require_relative "rbac/schema/hierarchy_member"
       require_relative "rbac/schema/role_assignment"
       require_relative "rbac/schema/entitlement_assignment"
@@ -48,12 +47,17 @@ module Scimitar
     def self.register_resources!
       load!
 
+      # Guard by endpoint string rather than class identity so the check
+      # is stable across dev-mode code reloads (gem classes don't reload,
+      # but endpoints are plain strings that always compare equal).
+      registered_endpoints = Scimitar::Engine.custom_resources.map(&:endpoint)
+
       [
         Scimitar::Resources::Rbac::Role,
         Scimitar::Resources::Rbac::Entitlement,
         Scimitar::Resources::Rbac::Application
       ].each do |resource|
-        unless Scimitar::Engine.custom_resources.include?(resource)
+        unless registered_endpoints.include?(resource.endpoint)
           Scimitar::Engine.add_custom_resource(resource)
         end
       end

@@ -13,7 +13,7 @@ module Scimitar
       # - Hierarchical RBAC: Role hierarchies via parentRoles/childRoles
       # - Constrained RBAC: Cardinality constraints on assignments
       class Role < Scimitar::Schema::Base
-        def initialize(options = {})
+        def initialize
           super(
             name:            "Role",
             id:              self.class.id,

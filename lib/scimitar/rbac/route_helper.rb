@@ -31,18 +31,18 @@ module Scimitar
       # @option options [String] :roles_controller Controller for Roles (e.g., "scim_v2/roles")
       # @option options [String] :entitlements_controller Controller for Entitlements
       # @option options [String] :applications_controller Controller for Applications
+      KNOWN_KEYS = %i[roles_controller entitlements_controller applications_controller].freeze
+
       def self.mount_rbac_routes(router, **options)
-        if options[:roles_controller]
-          mount_resource_routes(router, "Roles", options[:roles_controller])
+        unknown = options.keys - KNOWN_KEYS
+        if unknown.any?
+          raise ArgumentError, "mount_rbac_routes: unknown option(s): #{unknown.map(&:inspect).join(', ')}. " \
+                               "Valid keys: #{KNOWN_KEYS.map(&:inspect).join(', ')}"
         end
 
-        if options[:entitlements_controller]
-          mount_resource_routes(router, "Entitlements", options[:entitlements_controller])
-        end
-
-        if options[:applications_controller]
-          mount_resource_routes(router, "Applications", options[:applications_controller])
-        end
+        mount_resource_routes(router, "Roles",         options[:roles_controller])         if options[:roles_controller]
+        mount_resource_routes(router, "Entitlements",  options[:entitlements_controller])  if options[:entitlements_controller]
+        mount_resource_routes(router, "Applications",  options[:applications_controller])  if options[:applications_controller]
       end
 
       # Mount standard SCIM CRUD routes for a single resource.

@@ -7,7 +7,7 @@ module Scimitar
       # Applications represent target systems / Service Providers (SPs).
       # Entitlements are application-specific (each belongs to one application).
       class Application < Scimitar::Schema::Base
-        def initialize(options = {})
+        def initialize
           super(
             name:            "Application",
             id:              self.class.id,
